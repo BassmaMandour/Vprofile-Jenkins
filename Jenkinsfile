@@ -1,5 +1,5 @@
 def COLOR_MAP = [
-    'SUCCESS': 'good',
+    'SUCCESS': 'good', 
     'FAILURE': 'danger',
 ]
 pipeline {
@@ -17,12 +17,14 @@ pipeline {
         NEXUS_REPO_ID = "vprofile-repo"
         NEXUS_CREDENTIAL_ID = "nexus-id"
         ARTVERSION = "${env.BUILD_ID}"
+        IMAGE_NAME = "bassma/vprofile-app"
+        IMAGE_TAG  = "${env.BUILD_NUMBER}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'jenkins-ci', url: 'https://github.com/hkhcoder/vprofile-project.git'
+                git branch: 'master', url: 'https://github.com/BassmaMandour/Vprofile-Jenkins.git'
             }
         }
 
@@ -60,7 +62,7 @@ pipeline {
                 }
             }
         }
-
+        
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
@@ -121,6 +123,28 @@ pipeline {
                     }
                 }
             }
+        stage('Build App Image') {
+          steps {
+            script {
+                dockerImage = docker.build(
+                  "${IMAGE_NAME}:${env.BUILD_NUMBER}",
+                  "-f Docker/dockerfile ."
+                )
+            }
+          }
+        }
+        
+        stage('Push to Docker Hub') {
+          steps {
+            script {
+              docker.withRegistry('https://registry.hub.docker.com', 'docker-hub') {
+                docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+              }
+            }
+          }
+        }
+
+      
     }
     post {
         always {
